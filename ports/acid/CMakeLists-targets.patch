@@ -1,0 +1,271 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index dd7ac329..e8f4c816 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -71,198 +71,28 @@ set(_ACID_ALL_SYSTEM_LIBS true)
+ # Allows usage of configure time content
+ include(FetchContent)
+ 
+-# PhysFS is arranged before GLFW to prevent "uninstall" being defined twice
+-find_package(PhysFS 3.0.1 QUIET)
+-if(NOT PHYSFS_FOUND)
+-	set(_ACID_ALL_SYSTEM_LIBS false)
+-	FetchContent_Declare(physfs
+-			URL https://icculus.org/physfs/downloads/physfs-3.0.2.tar.bz2
+-			URL_MD5 dc751294aaf59d1359bbe34e693d1d87
+-			)
+-	FetchContent_GetProperties(physfs)
+-	if(NOT physfs_POPULATED)
+-		set(PHYSFS_TARGETNAME_DOCS "physfs-docs" CACHE INTERNAL STRING "Name of 'docs' build target")
+-		set(PHYSFS_BUILD_STATIC NOT${BUILD_SHARED_LIBS} CACHE INTERNAL "")
+-		set(PHYSFS_BUILD_SHARED ${BUILD_SHARED_LIBS} CACHE INTERNAL "")
+-		foreach(_physfs_option "PHYSFS_BUILD_TEST")
+-			set(${_physfs_option} OFF CACHE INTERNAL "")
+-		endforeach()
+-		FetchContent_Populate(physfs)
+-		add_subdirectory(${physfs_SOURCE_DIR} ${physfs_BINARY_DIR})
+-	endif()
+-	set_target_properties(physfs-static PROPERTIES FOLDER physfs)
+-	if(TARGET physfs)
+-		set_target_properties(physfs PROPERTIES FOLDER physfs)
+-	endif()
+-	if(TARGET physfs-docs)
+-		set_target_properties(physfs-docs PROPERTIES FOLDER physfs)
+-	endif()
+-
+-	# TODO: PhysFS disables rpath on GNU, when disabled Acid will not run on Unix.
+-	if(CMAKE_COMPILER_IS_GNUCC)
+-		set(CMAKE_SKIP_RPATH OFF CACHE BOOL "Skip RPATH" FORCE)
+-	endif()
+-
+-	set(PHYSFS_INCLUDE_DIR "${physfs_SOURCE_DIR}/src")
+-	# Set here so we can use it in Sources/CMakeLists.txt
+-	if(PHYSFS_BUILD_STATIC)
+-		set(PHYSFS_LIBRARY "physfs-static")
+-	else()
+-		set(PHYSFS_LIBRARY "physfs")
+-	endif()
++FetchContent_Declare(freetype
++URL https://download.savannah.gnu.org/releases/freetype/freetype-2.10.1.tar.gz
++URL_MD5 c50a3c9e5e62bdc938a6e1598a782947
++)
++FetchContent_GetProperties(freetype)
++if(NOT freetype_POPULATED)
++foreach(_freetype_option "CMAKE_DISABLE_FIND_PACKAGE_PNG" "CMAKE_DISABLE_FIND_PACKAGE_HarfBuzz"
++	"CMAKE_DISABLE_FIND_PACKAGE_BZip2" "CMAKE_DISABLE_FIND_PACKAGE_ZLIB" "CMAKE_DISABLE_FIND_PACKAGE_BROTLI")
++set(${_freetype_option} TRUE CACHE INTERNAL "")
++endforeach()
++FetchContent_Populate(freetype)
++add_subdirectory(${freetype_SOURCE_DIR} ${freetype_BINARY_DIR})
+ endif()
++set_target_properties(freetype PROPERTIES FOLDER freetype)
+ 
+-find_package(Freetype 2.9.1 QUIET)
+-if(NOT Freetype_FOUND)
+-	set(_ACID_ALL_SYSTEM_LIBS false)
+-	FetchContent_Declare(freetype
+-			URL https://download.savannah.gnu.org/releases/freetype/freetype-2.10.1.tar.gz
+-			URL_MD5 c50a3c9e5e62bdc938a6e1598a782947
+-			)
+-	FetchContent_GetProperties(freetype)
+-	if(NOT freetype_POPULATED)
+-		foreach(_freetype_option "CMAKE_DISABLE_FIND_PACKAGE_PNG" "CMAKE_DISABLE_FIND_PACKAGE_HarfBuzz"
+-				"CMAKE_DISABLE_FIND_PACKAGE_BZip2" "CMAKE_DISABLE_FIND_PACKAGE_ZLIB" "CMAKE_DISABLE_FIND_PACKAGE_BROTLI")
+-			set(${_freetype_option} TRUE CACHE INTERNAL "")
+-		endforeach()
+-		FetchContent_Populate(freetype)
+-		add_subdirectory(${freetype_SOURCE_DIR} ${freetype_BINARY_DIR})
+-	endif()
+-	set_target_properties(freetype PROPERTIES FOLDER freetype)
++# Used in target_link_libraries()
++set(FREETYPE_LIBRARIES "freetype")
+ 
+-	# Used in target_link_libraries()
+-	set(FREETYPE_LIBRARIES "freetype")
+-endif()
+-
+-find_package(glfw3 3.3 QUIET)
+-if(NOT TARGET glfw)
+-	set(_ACID_ALL_SYSTEM_LIBS false)
+-	FetchContent_Declare(glfw3
+-			URL https://github.com/glfw/glfw/archive/3.3.tar.gz
+-			URL_MD5 5be03812f5d109817e6558c3fab7bbe1
+-			)
+-	FetchContent_GetProperties(glfw3)
+-	if(NOT glfw3_POPULATED)
+-		foreach(_glfw3_option "GLFW_BUILD_TESTS" "GLFW_BUILD_EXAMPLES" "GLFW_BUILD_DOCS")
+-			set(${_glfw3_option} OFF CACHE INTERNAL "")
+-		endforeach()
+-		FetchContent_Populate(glfw3)
+-		add_subdirectory(${glfw3_SOURCE_DIR} ${glfw3_BINARY_DIR})
+-	endif()
+-
+-	# Used later to define as a pre-build dependency
+-	# The glfw3Config.cmake file doesn't define it automatically
+-	set(glfw_FOUND false)
+-else()
+-	set(glfw_FOUND true)
+-endif()
+-
+-# SPIRV and other GLSLang libraries are needed.
+-# NOTE: End-users can pass -DSPIRV_ROOT=/some/path to find the lib
+-set(SPIRV_ROOT CACHE PATH "An optional path to the system's SPIRV root dir to help find it. Ignore if building Glslang locally.")
+-find_library(SPIRV_LIBRARY
+-		NAMES "SPIRV" "libSPIRV"
+-		HINTS "${SPIRV_ROOT}"
+-		)
+-find_library(GLSLANG_LIBRARY
+-		NAMES "glslang" "libglslang"
+-		HINTS "${SPIRV_ROOT}"
+-		)
+-find_library(OSDEPENDENT_LIBRARY
+-		NAMES "OSDependent" "libOSDependent"
+-		HINTS "${SPIRV_ROOT}"
+-		)
+-find_library(OGLCOMPILER_LIBRARY
+-		NAMES "OGLCompiler" "libOGLCompiler"
+-		HINTS "${SPIRV_ROOT}"
+-		)
+-find_library(HLSL_LIBRARY
+-		NAMES "HLSL" "libHLSL"
+-		HINTS "${SPIRV_ROOT}"
+-		)
+-find_path(SPIRV_INCLUDE_DIR
+-		NAMES "GlslangToSpv.h"
+-		PATH_SUFFIXES "SPIRV"
+-		HINTS "${SPIRV_ROOT}"
+-		)
+-
+-# TODO: Does glslang provide version info?
+-if(NOT SPIRV_LIBRARY
+-		OR NOT GLSLANG_LIBRARY
+-		OR NOT OSDEPENDENT_LIBRARY
+-		OR NOT OGLCOMPILER_LIBRARY
+-		OR NOT HLSL_LIBRARY
+-		OR NOT SPIRV_INCLUDE_DIR)
+-	set(_ACID_ALL_SYSTEM_LIBS false)
+-	FetchContent_Declare(glslang
+-			URL https://github.com/KhronosGroup/glslang/archive/7.13.3496.tar.gz
+-			URL_MD5 9bfbff6115e490654e149fd0558dba0c
+-			)
+-	FetchContent_GetProperties(glslang)
+-	if(NOT glslang_POPULATED)
+-		foreach(_glslang_option "BUILD_TESTING" "ENABLE_GLSLANG_BINARIES" "ENABLE_SPVREMAPPER" "ENABLE_HLSL" "ENABLE_AMD_EXTENSIONS" "ENABLE_NV_EXTENSIONS")
+-			set(${_glslang_option} OFF CACHE INTERNAL "")
+-		endforeach()
+-		foreach(_glslang_option "SKIP_GLSLANG_INSTALL" "ENABLE_OPT")
+-			set(${_glslang_option} ON CACHE INTERNAL "")
+-		endforeach()
+-		FetchContent_Populate(glslang)
+-		add_subdirectory(${glslang_SOURCE_DIR} ${glslang_BINARY_DIR})
+-	endif()
+-
+-	# Used later to define as a pre-build dependencies
+-	# Have to manually define because we manually searched for SPIRV
+-	set(SPIRV_FOUND false)
+-	# Used in target_link_libraries()
+-	# Please note that SPIRV is now a CMake target, which means transitive dependencies are taken into account.
+-	set(SPIRV_LIBRARIES "SPIRV")
+-else()
+-	set(SPIRV_FOUND true)
+-	# glslang, hlsl and the others are transitive dependencies of libSPIRV, which are not detected
+-	# during linking (because the project might be a shared object).
+-	set(SPIRV_LIBRARIES
+-			"${SPIRV_LIBRARY}"
+-			"${GLSLANG_LIBRARY}"
+-			"${OSDEPENDENT_LIBRARY}"
+-			"${OGLCOMPILER_LIBRARY}"
+-			"${HLSL_LIBRARY}"
+-			)
+-endif()
+-
+-# TODO: Acid requires 2.89 on macOS, the last release was Dec 2018.
+-find_package(Bullet 2.88 QUIET)
+-if(NOT BULLET_FOUND)
+-	set(_ACID_ALL_SYSTEM_LIBS false)
+-	FetchContent_Declare(bullet3
+-			URL https://github.com/bulletphysics/bullet3/archive/2.88.tar.gz
+-			URL_MD5 d389e7235f00c66abf257bb7b21477ac
+-			)
+-	FetchContent_GetProperties(bullet3)
+-	if(NOT bullet3_POPULATED)
+-		# On MSVC shared mode must be disabled with bullet currently
+-		set(BUILD_SHARED_LIBS_SAVED "${BUILD_SHARED_LIBS}")
+-		foreach(_bullet3_option "BUILD_BULLET3" "BUILD_PYBULLET" "BUILD_BULLET2_DEMOS" "BUILD_OPENGL3_DEMOS" "BUILD_CPU_DEMOS" "BUILD_EXTRAS" "BUILD_UNIT_TESTS" "USE_GRAPHICAL_BENCHMARK" "USE_GLUT")
+-			set(${_bullet3_option} OFF CACHE INTERNAL "")
+-		endforeach()
+-		if(MSVC)
+-			set(BUILD_SHARED_LIBS OFF)
+-		endif()
+-		FetchContent_Populate(bullet3)
+-		add_subdirectory(${bullet3_SOURCE_DIR} ${bullet3_BINARY_DIR})
+-		# Reset back to value before MSVC fix
+-		set(BUILD_SHARED_LIBS "${BUILD_SHARED_LIBS_SAVED}")
+-	endif()
+-	set_target_properties(Bullet3Common PROPERTIES FOLDER Bullet)
+-	set_target_properties(BulletCollision PROPERTIES FOLDER Bullet)
+-	set_target_properties(BulletDynamics PROPERTIES FOLDER Bullet)
+-	set_target_properties(BulletInverseDynamics PROPERTIES FOLDER Bullet)
+-	set_target_properties(BulletSoftBody PROPERTIES FOLDER Bullet)
+-	set_target_properties(LinearMath PROPERTIES FOLDER Bullet)
+-
+-	set(BULLET_INCLUDE_DIRS "${bullet3_SOURCE_DIR}/src")
+-	# Used in target_link_libraries()
+-	set(BULLET_LIBRARIES "BulletSoftBody" "BulletDynamics" "BulletCollision" "LinearMath")
+-endif()
++find_package(PhysFS CONFIG REQUIRED)
++find_package(glfw3 CONFIG REQUIRED)
++find_package(glslang CONFIG REQUIRED)
++find_package(Bullet CONFIG REQUIRED)
+ 
+ # Acid sources directory
+ add_subdirectory(Sources)
+diff --git a/Sources/CMakeLists.txt b/Sources/CMakeLists.txt
+index b29cdcb6..5719fae2 100644
+--- a/Sources/CMakeLists.txt
++++ b/Sources/CMakeLists.txt
+@@ -85,7 +85,6 @@ target_link_libraries(Acid
+ 		)
+ 
+ set_target_properties(Acid PROPERTIES
+-		INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR}
+ 		FOLDER "Acid"
+ 		)
+ 
+@@ -109,14 +108,14 @@ if(_ACID_ALL_SYSTEM_LIBS)
+ 	install(EXPORT AcidTargets
+ 			# Makes the end-user imported library Acid::Acid instead of just Acid
+ 			NAMESPACE Acid::
+-			DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
++			DESTINATION "${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME}"
+ 			)
+ 	# Defines write_basic_package_version_file
+ 	include(CMakePackageConfigHelpers)
+ 	# Dynamically writes the path to the resources dir (if installed) into the AcidConfig.cmake file
+ 	configure_package_config_file("${CMAKE_CURRENT_SOURCE_DIR}/AcidConfig.cmake.in"
+ 			"${PROJECT_BINARY_DIR}/AcidConfig.cmake"
+-			INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
++			INSTALL_DESTINATION "${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME}"
+ 			PATH_VARS CMAKE_INSTALL_DATADIR
+ 			NO_CHECK_REQUIRED_COMPONENTS_MACRO
+ 			)
+@@ -128,13 +127,17 @@ if(_ACID_ALL_SYSTEM_LIBS)
+ 	install(FILES
+ 			"${PROJECT_BINARY_DIR}/AcidConfig.cmake"
+ 			"${PROJECT_BINARY_DIR}/AcidConfigVersion.cmake"
+-			DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
++			DESTINATION "${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME}"
+ 			)
+ else()
+ 	# Install without an export since we're using 1 (or more) non-system libs
+-	install(TARGETS Acid
++	install(TARGETS Acid EXPORT AcidTargets
+ 			LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+ 			ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+ 			RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+ 			)
++	install(EXPORT AcidTargets
++			NAMESPACE Acid::
++			DESTINATION "${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME}"
++			)
+ endif()

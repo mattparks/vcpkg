@@ -1,0 +1,5 @@
+Source: acid
+Version: 0.13.5
+Homepage: https://github.com/EQMG/Acid
+Description: A high speed C++17 Vulkan game engine
+Build-Depends: openal-soft, physfs, freetype, glfw3, glslang, bullet3, gtest
